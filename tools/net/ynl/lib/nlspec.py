@@ -231,6 +231,7 @@ class SpecStructMember(SpecElement):
     def __init__(self, family, yaml):
         super().__init__(family, yaml)
         self.type = yaml['type']
+        self.enum = yaml.get('enum')
 
 
 class SpecStruct(SpecElement):
