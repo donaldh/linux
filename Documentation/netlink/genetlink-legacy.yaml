@@ -32,7 +32,9 @@ properties:
     minimum: 1
   protocol:
     description: Schema compatibility level. Default is "genetlink".
-    enum: [ genetlink, genetlink-c, genetlink-legacy ] # Trim
+    enum: [ genetlink, genetlink-c, genetlink-legacy, netlink ] # Trim
+  protonum:
+    type: integer
   uapi-header:
     description: Path to the uAPI header, default is linux/${family-name}.h
     type: string
@@ -120,6 +122,15 @@ properties:
                 type: string
               type:
                 enum: [ u8, u16, u32, u64, s8, s16, s32, s64, string ]
+              enum:
+                description: Name of the enum type used for the attribute.
+                type: string
+              enum-as-flags:
+                description: |
+                  Treat the enum as flags. In most cases enum is either used as flags or as values.
+                  Sometimes, however, both forms are necessary, in which case header contains the enum
+                  form while specific attributes may request to convert the values into a bitfield.
+                type: boolean
               len:
                 $ref: '#/$defs/len-or-define'
         # End genetlink-legacy

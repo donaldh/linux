@@ -1,0 +1,190 @@
+# SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause)
+
+name: rt-route
+protocol: netlink
+protonum: 0
+
+doc:
+  Route configuration over rtnetlink.
+
+definitions:
+  -
+    name: rtm-type
+    type: enum
+    entries:
+      - unicast
+      - local
+      - broadcast
+      - anycast
+      - multicast
+      - blackhole
+      - unreachable
+      - prohibit
+      - throw
+      - nat
+      - xresolve
+  -
+    name: rtmsg
+    type: struct
+    members:
+      -
+        name: family
+        type: u8
+      -
+        name: dst-len
+        type: u8
+      -
+        name: src-len
+        type: u8
+      -
+        name: tos
+        type: u8
+      -
+        name: table
+        type: u8
+      -
+        name: protocol
+        type: u8
+      -
+        name: scope
+        type: u8
+      -
+        name: type
+        type: u8
+        enum: rtm-type
+      -
+        name: flags
+        type: u32
+  -
+    name: rta-cacheinfo
+    type: struct
+    members:
+      -
+        name: clntref
+        type: u32
+      -
+        name: lastuse
+        type: u32
+      -
+        name: expires
+        type: u32
+      -
+        name: error
+        type: u32
+      -
+        name: used
+        type: u32
+
+attribute-sets:
+  -
+    name: route-attrs
+    attributes:
+      -
+        name: rta-dst
+        type: binary
+      -
+        name: rta-src
+        type: binary
+      -
+        name: rta-iif
+        type: u32
+      -
+        name: rta-oif
+        type: u32
+      -
+        name: rta-gateway
+        type: binary
+      -
+        name: rta-priority
+        type: binary
+      -
+        name: rta-prefsrc
+        type: binary
+      -
+        name: rta-metrics
+        type: binary
+      -
+        name: rta-multipath
+        type: binary
+      -
+        name: rta-protoinfo
+        type: binary
+      -
+        name: rta-flow
+        type: u32
+      -
+        name: rta-cacheinfo
+        type: binary
+        struct: rta-cacheinfo
+      -
+        name: rta-session
+        type: binary
+      -
+        name: rta-mp-algo
+        type: binary
+      -
+        name: rta-table
+        type: u32
+      -
+        name: rta-mark
+        type: binary
+      -
+        name: rta-mfc-stats
+        type: binary
+      -
+        name: rta-via
+        type: binary
+      -
+        name: rta-newdst
+        type: binary
+      -
+        name: rta-pref
+        type: binary
+      -
+        name: rta-encap-type
+        type: binary
+      -
+        name: rta-encap
+        type: binary
+      -
+        name: rta-expires
+        type: binary
+      -
+        name: rta-pad
+        type: binary
+      -
+        name: rta-uid
+        type: binary
+      -
+        name: rta-ttl-propagate
+        type: binary
+      -
+        name: rta-ip-proto
+        type: binary
+      -
+        name: rta-sport
+        type: binary
+      -
+        name: rta-dport
+        type: binary
+      -
+        name: rta-nh-id
+        type: binary
+
+operations:
+  list:
+    -
+      name: route-get
+      doc: Get / dump route information.
+      value: 26
+      attribute-set: route-attrs
+      fixed-header: rtmsg
+      do:
+        reply: &route-all
+          attributes:
+            - index
+
+mcast-groups:
+  list:
+    -
+      name: mgmt
