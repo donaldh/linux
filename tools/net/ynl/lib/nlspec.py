@@ -226,12 +226,15 @@ class SpecStructMember(SpecElement):
     Represents a single struct member attribute.
 
     Attributes:
-        type    string, type of the member attribute
+        type        string, type of the member attribute
+        enum        string, name of the enum definition
+        byte_order  string
     """
     def __init__(self, family, yaml):
         super().__init__(family, yaml)
         self.type = yaml['type']
         self.enum = yaml.get('enum')
+        self.byte_order = yaml.get('byte-order')
 
 
 class SpecStruct(SpecElement):
