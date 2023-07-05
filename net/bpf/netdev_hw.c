@@ -10,26 +10,28 @@ extern struct bpf_struct_ops bpf_net_device_hw_ops;
 
 static const struct bpf_func_proto *
 bpf_hw_get_func_proto(enum bpf_func_id func_id,
-			  const struct bpf_prog *prog)
+		      const struct bpf_prog *prog)
 {
 	printk(KERN_INFO "bpf_hw_get_func_proto\n");
-	return NULL;
+	return bpf_base_func_proto(func_id);
 }
 
 static bool bpf_hw_is_valid_access(int off, int size,
-				       enum bpf_access_type type,
-				       const struct bpf_prog *prog,
-				       struct bpf_insn_access_aux *info)
+				   enum bpf_access_type type,
+				   const struct bpf_prog *prog,
+				   struct bpf_insn_access_aux *info)
 {
-	printk(KERN_INFO "bpf_hw_is_valid_access\n");
-	return true;
+	bool r = bpf_tracing_btf_ctx_access(off, size, type, prog, info);
+	printk(KERN_INFO "bpf_hw_is_valid_access %d, %d, %d: %s\n",
+	       off, size, type, r ? "true" : "false");
+	return r;
 }
 
 static int bpf_hw_btf_struct_access(struct bpf_verifier_log *log,
 				    const struct bpf_reg_state *reg,
 				    int off, int size)
 {
-	printk(KERN_INFO "bpf_hw_btf_struct_access\n");
+	printk(KERN_INFO "bpf_hw_btf_struct_access %d, %d\n", off, size);
 	return 0;
 }
 
