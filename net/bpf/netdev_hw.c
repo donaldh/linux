@@ -41,15 +41,17 @@ static const struct bpf_verifier_ops  bpf_hw_verifier_ops = {
 	.btf_struct_access = bpf_hw_btf_struct_access,
 };
 
-static int bpf_hw_reg(void *kdata)
+static int bpf_hw_reg(void *kdata, struct bpf_struct_ops_link *link)
 {
-	printk(KERN_INFO "bpf_hw_reg\n");
+	struct net_device *dev = bpf_struct_ops_link_get_device(link);
+	printk(KERN_INFO "bpf_hw_reg: %s\n", dev->name);
 	return 0;
 }
 
-static void bpf_hw_unreg(void *kdata)
+static void bpf_hw_unreg(void *kdata, struct bpf_struct_ops_link *link)
 {
-	printk(KERN_INFO "bpf_hw_unreg\n");
+	struct net_device *dev = bpf_struct_ops_link_get_device(link);
+	printk(KERN_INFO "bpf_hw_unreg: %s\n", dev->name);
 }
 
 static int bpf_hw_update(void *kdata, void *old_kdata)

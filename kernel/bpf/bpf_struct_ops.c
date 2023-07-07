@@ -62,6 +62,7 @@ struct bpf_struct_ops_map {
 
 struct bpf_struct_ops_link {
 	struct bpf_link link;
+	struct net_device *dev;
 	struct bpf_map __rcu *map;
 };
 
@@ -522,7 +523,7 @@ static long bpf_struct_ops_map_update_elem(struct bpf_map *map, void *key,
 	}
 
 	set_memory_rox((long)st_map->image, 1);
-	err = st_ops->reg(kdata);
+	err = st_ops->reg(kdata, NULL);
 	if (likely(!err)) {
 		/* This refcnt increment on the map here after
 		 * 'st_ops->reg()' is secure since the state of the
@@ -571,7 +572,7 @@ static long bpf_struct_ops_map_delete_elem(struct bpf_map *map, void *key)
 			     BPF_STRUCT_OPS_STATE_TOBEFREE);
 	switch (prev_state) {
 	case BPF_STRUCT_OPS_STATE_INUSE:
-		st_map->st_ops->unreg(&st_map->kvalue.data);
+		st_map->st_ops->unreg(&st_map->kvalue.data, NULL);
 		bpf_map_put(map);
 		return 0;
 	case BPF_STRUCT_OPS_STATE_TOBEFREE:
@@ -779,7 +780,7 @@ static void bpf_struct_ops_map_link_dealloc(struct bpf_link *link)
 		/* st_link->map can be NULL if
 		 * bpf_struct_ops_link_create() fails to register.
 		 */
-		st_map->st_ops->unreg(&st_map->kvalue.data);
+		st_map->st_ops->unreg(&st_map->kvalue.data, st_link);
 		bpf_map_put(&st_map->map);
 	}
 	kfree(st_link);
@@ -864,9 +865,11 @@ static const struct bpf_link_ops bpf_struct_ops_map_lops = {
 
 int bpf_struct_ops_link_create(union bpf_attr *attr)
 {
+	struct net *net = current->nsproxy->net_ns;
 	struct bpf_struct_ops_link *link = NULL;
 	struct bpf_link_primer link_primer;
 	struct bpf_struct_ops_map *st_map;
+	struct net_device *dev = NULL;
 	struct bpf_map *map;
 	int err;
 
@@ -892,7 +895,23 @@ int bpf_struct_ops_link_create(union bpf_attr *attr)
 	if (err)
 		goto err_out;
 
-	err = st_map->st_ops->reg(st_map->kvalue.data);
+	if (attr->link_create.target_ifindex) {
+		rtnl_lock();
+		dev = dev_get_by_index(net, attr->link_create.target_ifindex);
+		if (!dev) {
+			err = -EINVAL;
+			rtnl_unlock();
+			goto err_out;
+		}
+		link->dev = dev;
+	}
+
+	err = st_map->st_ops->reg(st_map->kvalue.data, link);
+	if (attr->link_create.target_ifindex) {
+		dev_put(dev);
+		rtnl_unlock();
+	}
+
 	if (err) {
 		bpf_link_cleanup(&link_primer);
 		link = NULL;
@@ -906,5 +925,10 @@ err_out:
 	bpf_map_put(map);
 	kfree(link);
 	return err;
+}
+
+struct net_device *bpf_struct_ops_link_get_device(struct bpf_struct_ops_link *link)
+{
+	return link->dev;
 }
 

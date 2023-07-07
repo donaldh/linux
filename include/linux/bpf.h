@@ -1535,6 +1535,7 @@ struct bpf_link_primer {
 };
 
 struct bpf_struct_ops_value;
+struct bpf_struct_ops_link;
 struct btf_member;
 
 #define BPF_STRUCT_OPS_MAX_NR_MEMBERS 64
@@ -1547,8 +1548,8 @@ struct bpf_struct_ops {
 	int (*init_member)(const struct btf_type *t,
 			   const struct btf_member *member,
 			   void *kdata, const void *udata);
-	int (*reg)(void *kdata);
-	void (*unreg)(void *kdata);
+	int (*reg)(void *kdata, struct bpf_struct_ops_link *link);
+	void (*unreg)(void *kdata, struct bpf_struct_ops_link *link);
 	int (*update)(void *kdata, void *old_kdata);
 	int (*validate)(void *kdata);
 	const struct btf_type *type;
@@ -1586,6 +1587,7 @@ static inline void bpf_module_put(const void *data, struct module *owner)
 		module_put(owner);
 }
 int bpf_struct_ops_link_create(union bpf_attr *attr);
+struct net_device *bpf_struct_ops_link_get_device(struct bpf_struct_ops_link *link);
 
 #ifdef CONFIG_NET
 /* Define it here to avoid the use of forward declaration */
