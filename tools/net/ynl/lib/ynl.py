@@ -228,6 +228,31 @@ class NlMsg:
                             desc += f" ({spec['doc']})"
                         self.extack['miss-type'] = desc
 
+    def decode_fixed_header(self, consts, fixed_header_members):
+        self.fixed_header_attrs = dict()
+        offset = 0
+        for m in fixed_header_members:
+            format = NlAttr.get_format(m.type, m.byte_order)
+            [ value ] = format.unpack_from(self.raw, offset)
+
+            if m.enum:
+                enum = consts[m.enum]
+                i = enum.get('value-start', 0)
+                if 'enum-as-flags' in m and m['enum-as-flags']:
+                    raw = value
+                    value = set()
+                    while raw:
+                        if raw & 1:
+                            value.add(enum.entries_by_val[i].name)
+                        raw >>= 1
+                        i += 1
+                else:
+                    value = enum.entries_by_val[value - 1].name
+
+            offset += format.size
+            self.fixed_header_attrs[m.name] = value
+        self.raw = self.raw[offset:]
+
     def __repr__(self):
         msg = f"nl_len = {self.nl_len} ({len(self.raw)}) nl_flags = 0x{self.nl_flags:x} nl_type = {self.nl_type}\n"
         if self.error:
@@ -291,7 +316,7 @@ def _genl_load_families():
                 if nl_msg.done:
                     return
 
-                gm = GenlMsg(nl_msg)
+                gm = GenlMsg({}, nl_msg)
                 fam = dict()
                 for attr in gm.raw_attrs:
                     if attr.type == Netlink.CTRL_ATTR_FAMILY_ID:
@@ -317,23 +342,14 @@ def _genl_load_families():
 
 
 class GenlMsg:
-    def __init__(self, nl_msg, fixed_header_members=[]):
-        self.nl = nl_msg
+    def __init__(self, consts, nl_msg, fixed_header_members=[]):
+        self.genl_cmd, self.genl_version, _ = struct.unpack_from("BBH", nl_msg.raw, 0)
+        nl_msg.raw = nl_msg.raw[4:]
+        nl_msg.decode_fixed_header(consts, fixed_header_members)
 
-        self.hdr = nl_msg.raw[0:4]
-        offset = 4
-
-        self.genl_cmd, self.genl_version, _ = struct.unpack("BBH", self.hdr)
-
-        self.fixed_header_attrs = dict()
-        for m in fixed_header_members:
-            format = NlAttr.get_format(m.type, m.byte_order)
-            decoded = format.unpack_from(nl_msg.raw, offset)
-            offset += format.size
-            self.fixed_header_attrs[m.name] = decoded[0]
-
-        self.raw = nl_msg.raw[offset:]
+        self.raw = nl_msg.raw
         self.raw_attrs = NlAttrs(self.raw)
+        self.fixed_header_attrs = nl_msg.fixed_header_attrs
 
     def __repr__(self):
         msg = repr(self.nl)
@@ -343,9 +359,28 @@ class GenlMsg:
         return msg
 
 
-class GenlFamily:
-    def __init__(self, family_name):
+class NetlinkProtocolFamily:
+    def __init__(self, family_name, proto_num):
         self.family_name = family_name
+        self.proto = proto_num
+
+    def _message(self, nl_type, nl_flags, seq=None):
+        if seq is None:
+            seq = random.randint(1, 1024)
+        nlmsg = struct.pack("HHII", nl_type, nl_flags, seq, 0)
+        return nlmsg
+
+    def message(self, flags, command, version, seq=None):
+        return self._message(command, flags, seq)
+
+    def decode(self, consts, nl_msg, fixed_header_members=[]):
+        nl_msg.decode_fixed_header(consts, fixed_header_members)
+        nl_msg.raw_attrs = NlAttrs(nl_msg.raw)
+        return nl_msg
+
+class GenlProtocolFamily(NetlinkProtocolFamily):
+    def __init__(self, family_name):
+        super().__init__(family_name, Netlink.NETLINK_GENERIC)
 
         global genl_family_name_to_id
         if genl_family_name_to_id is None:
@@ -353,6 +388,14 @@ class GenlFamily:
 
         self.genl_family = genl_family_name_to_id[family_name]
         self.family_id = genl_family_name_to_id[family_name]['id']
+
+    def message(self, flags, command, version, seq=None):
+        nlmsg = self._message(self.family_id, flags, seq)
+        genlmsg = struct.pack("BBH", command, version, 0)
+        return nlmsg + genlmsg
+
+    def decode(self, consts, nl_msg, fixed_header_members=[]):
+        return GenlMsg(consts, nl_msg, fixed_header_members)
 
 
 #
@@ -366,7 +409,15 @@ class YnlFamily(SpecFamily):
 
         self.include_raw = False
 
-        self.sock = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, Netlink.NETLINK_GENERIC)
+        try:
+            if self.proto == "netlink-raw":
+                self.family = NetlinkProtocolFamily(self.yaml['name'], self.yaml['protonum'])
+            else:
+                self.family = GenlProtocolFamily(self.yaml['name'])
+        except KeyError:
+            raise Exception(f"Family '{self.yaml['name']}' not supported by the kernel")
+
+        self.sock = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, self.family.proto)
         self.sock.setsockopt(Netlink.SOL_NETLINK, Netlink.NETLINK_CAP_ACK, 1)
         self.sock.setsockopt(Netlink.SOL_NETLINK, Netlink.NETLINK_EXT_ACK, 1)
 
@@ -381,10 +432,6 @@ class YnlFamily(SpecFamily):
             bound_f = functools.partial(self._op, op_name)
             setattr(self, op.ident_name, bound_f)
 
-        try:
-            self.family = GenlFamily(self.yaml['name'])
-        except KeyError:
-            raise Exception(f"Family '{self.yaml['name']}' not supported by the kernel")
 
     def ntf_subscribe(self, mcast_name):
         if mcast_name not in self.family.genl_family['mcast']:
@@ -451,12 +498,21 @@ class YnlFamily(SpecFamily):
         attr_space = self.attr_sets[space]
         rsp = dict()
         for attr in attrs:
-            attr_spec = attr_space.attrs_by_val[attr.type]
+            try:
+                attr_spec = attr_space.attrs_by_val[attr.type]
+            except KeyError:
+                print(f"No attribute spec for {attr.type} in attribute space {space}, skipping.")
+                continue
+
             if attr_spec["type"] == 'nest':
                 subdict = self._decode(NlAttrs(attr.raw), attr_spec['nested-attributes'])
                 decoded = subdict
             elif attr_spec["type"] == 'string':
-                decoded = attr.as_strz()
+                try:
+                    decoded = attr.as_strz()
+                except UnicodeDecodeError:
+                    print(f"Failed to decode string {attr_spec['name']}, skipping")
+                    continue
             elif attr_spec["type"] == 'binary':
                 decoded = self._decode_binary(attr, attr_spec)
             elif attr_spec["type"] == 'flag':
@@ -564,7 +620,7 @@ class YnlFamily(SpecFamily):
             nl_flags |= Netlink.NLM_F_DUMP
 
         req_seq = random.randint(1024, 65535)
-        msg = _genl_msg(self.family.family_id, nl_flags, op.req_value, 1, req_seq)
+        msg = self.family.message(nl_flags, op.req_value, 1, req_seq)
         fixed_header_members = []
         if op.fixed_header:
             fixed_header_members = self.consts[op.fixed_header].members
@@ -596,9 +652,10 @@ class YnlFamily(SpecFamily):
                     done = True
                     break
 
-                gm = GenlMsg(nl_msg, fixed_header_members)
+                gm = self.family.decode(self.consts, nl_msg, fixed_header_members)
+
                 # Check if this is a reply to our request
-                if nl_msg.nl_seq != req_seq or gm.genl_cmd != op.rsp_value:
+                if nl_msg.nl_seq != req_seq: # or gm.genl_cmd != op.rsp_value:
                     if gm.genl_cmd in self.async_msg_ids:
                         self.handle_ntf(nl_msg, gm)
                         continue
