@@ -333,7 +333,6 @@ class SpecMcastGroup(SpecElement):
     """
     def __init__(self, family, yaml):
         super().__init__(family, yaml)
-        print(yaml)
         self.id = self.yaml.get('id')
 
 
