@@ -147,6 +147,7 @@ class NlAttr:
                 format = self.get_format(m.type, m.byte_order)
                 [ decoded ] = format.unpack_from(self.raw, offset)
                 offset += format.size
+
             if m.display_hint:
                 decoded = self.formatted_string(decoded, m.display_hint)
             value[m.name] = decoded
@@ -417,8 +418,7 @@ class YnlFamily(SpecFamily):
         pad = b'\x00' * ((4 - len(attr_payload) % 4) % 4)
         return struct.pack('HH', len(attr_payload) + 4, nl_type) + attr_payload + pad
 
-    def _decode_enum(self, rsp, attr_spec):
-        raw = rsp[attr_spec['name']]
+    def _decode_enum(self, raw, attr_spec):
         enum = self.consts[attr_spec['enum']]
         if 'enum-as-flags' in attr_spec and attr_spec['enum-as-flags']:
             i = 0
@@ -430,7 +430,7 @@ class YnlFamily(SpecFamily):
                 i += 1
         else:
             value = enum.entries_by_val[raw].name
-        rsp[attr_spec['name']] = value
+        return value
 
     def _decode_binary(self, attr, attr_spec):
         if attr_spec.struct_name:
@@ -438,7 +438,7 @@ class YnlFamily(SpecFamily):
             decoded = attr.as_struct(members)
             for m in members:
                 if m.enum:
-                    self._decode_enum(decoded, m)
+                     decoded[m.name] = self._decode_enum(decoded[m.name], m)
         elif attr_spec.sub_type:
             decoded = attr.as_c_array(attr_spec.sub_type)
         else:
@@ -466,6 +466,9 @@ class YnlFamily(SpecFamily):
             else:
                 raise Exception(f'Unknown {attr_spec["type"]} with name {attr_spec["name"]}')
 
+            if 'enum' in attr_spec:
+                decoded = self._decode_enum(decoded, attr_spec)
+
             if not attr_spec.is_multi:
                 rsp[attr_spec['name']] = decoded
             elif attr_spec.name in rsp:
@@ -473,8 +476,6 @@ class YnlFamily(SpecFamily):
             else:
                 rsp[attr_spec.name] = [decoded]
 
-            if 'enum' in attr_spec:
-                self._decode_enum(rsp, attr_spec)
         return rsp
 
     def _decode_extack_path(self, attrs, attr_set, offset, target):
