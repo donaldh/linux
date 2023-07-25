@@ -131,6 +131,12 @@ properties:
               enum:
                 description: Name of the enum type used for the attribute.
                 type: string
+              enum-as-flags:
+                description: |
+                  Treat the enum as flags. In most cases enum is either used as flags or as values.
+                  Sometimes, however, both forms are necessary, in which case header contains the enum
+                  form while specific attributes may request to convert the values into a bitfield.
+                type: boolean
               display-hint: &display-hint
                 description: |
                   Optional format indicator that is intended only for choosing
