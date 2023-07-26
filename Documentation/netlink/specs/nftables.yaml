@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause)
+
+name: nftables
+protocol: netlink
+protonum: 12
+
+doc:
+  Netfilter nftables configuration over netlink.
+
+definitions:
+  -
+    name: nfgenmsg
+    type: struct
+    members:
+      -
+        name: nfgen-family
+        type: u8
+      -
+        name: version
+        type: u8
+      -
+        name: res-id
+        type: u16
+
+attribute-sets:
+  -
+    name: empty-attrs
+    attributes:
+      -
+        name: name
+        type: string
+  -
+    name: table-attrs
+    attributes:
+      -
+        name: name
+        type: string
+      -
+        name: flags
+        type: u32
+      -
+        name: use
+        type: u32
+      -
+        name: userdata
+        type: binary
+  -
+    name: chain-attrs
+    attributes:
+      -
+        name: nfta-chain-table
+        type: string
+      -
+        name: nfta-chain-handle
+        type: u64
+      -
+        name: nfta-chain-name
+        type: string
+      -
+        name: nfta-chain-hook
+        type: nest
+        nested-attributes: nft-hook-attrs
+      -
+        name: nfta-chain-policy
+        type: u32
+      -
+        name: nfta-chain-use
+        type: u32
+      -
+        name: nfta-chain-type
+        type: string
+      -
+        name: nfta-chain-counters
+        type: nest
+        nested-attributes: nft-counter-attrs
+      -
+        name: nfta-chain-flags
+        type: binary
+      -
+        name: nfta-chain-id
+        type: u32
+      -
+        name: nfta-chain-userdata
+        type: binary
+  -
+    name: nft-hook-attrs
+    attributes:
+      -
+        name: hooknum
+        type: u32
+      -
+        name: priority
+        type: u32
+      -
+        name: dev
+        type: string
+      -
+        name: devs
+        type: binary
+  -
+    name: nft-counter-attrs
+    attributes:
+      -
+        name: bytes
+        type: u64
+      -
+        name: packets
+        type: u64
+
+operations:
+  list:
+    -
+      name: table-get
+      doc: Get / dump tables.
+      value: 0xa01
+      attribute-set: table-attrs
+      fixed-header: nfgenmsg
+    -
+      name: chain-get
+      doc: Get / dump chains.
+      value: 0xa04
+      attribute-set: chain-attrs
+      fixed-header: nfgenmsg
+
+mcast-groups:
+  list:
+    -
+      name: mgmt

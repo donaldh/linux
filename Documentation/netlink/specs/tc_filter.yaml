@@ -1,0 +1,519 @@
+# SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause)
+
+name: tc-filter
+protocol: netlink-raw
+protonum: 0
+
+doc:
+  tc filter configuration over rtnetlink.
+
+definitions:
+  -
+    name: tcmsg
+    type: struct
+    members:
+      -
+        name: tcm-family
+        type: u8
+      -
+        name: tcm-pad1
+        type: u8
+      -
+        name: tcm-pad2
+        type: u16
+      -
+        name: tcm-ifindex
+        type: s32
+      -
+        name: tcm-handle
+        type: u32
+      -
+        name: tcm-parent
+        type: u32
+      -
+        name: tcm-info
+        type: u32
+  -
+    name: tc-cls-flags
+    type: flags
+    entries:
+      - skip-hw
+      - skip-sw
+      - in-hw
+      - not-in-nw
+      - verbose
+
+attribute-sets:
+  -
+    name: tfilter-attrs
+    attributes:
+      -
+        name: tca-kind
+        type: string
+      -
+        name: tca-options
+        type: nest
+        nested-attributes: tc-flower-attrs
+      -
+        name: tca-stats
+        type: binary
+      -
+        name: tca-xstats
+        type: binary
+      -
+        name: tca-rate
+        type: binary
+      -
+        name: tca-fcnt
+        type: binary
+      -
+        name: tca-stats2
+        type: binary
+      -
+        name: tca-stab
+        type: binary
+      -
+        name: tca-pad
+        type: binary
+      -
+        name: tca-dump-invisible
+        type: binary
+      -
+        name: tca-chain
+        type: u32
+      -
+        name: tca-hw-offload
+        type: u8
+      -
+        name: tca-ingress-block
+        type: u32
+      -
+        name: tca-egress-block
+        type: u32
+      -
+        name: tca-dump-flags
+        type: binary
+      -
+        name: tca-ext-warn-msg
+        type: string
+  -
+    name: tc-flower-attrs
+    attributes:
+      -
+        name: tca-flower-classid
+        type: u32
+      -
+        name: tca-flower-indev
+        type: string
+      -
+        name: tca-flower-act #
+        type: array-nest
+        nested-attributes: tc-act-attrs
+      -
+        name: tca-flower-key-eth-dst #		/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-eth-dst-mask #	/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-eth-src #		/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-eth-src-mask #	/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-eth-type #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ip-proto #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-ipv4-src #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ipv4-src-mask #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ipv4-dst #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ipv4-dst-mask #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ipv6-src #	/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-ipv6-src-mask #	/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-ipv6-dst #	/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-ipv6-dst-mask #	/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-tcp-src #		/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-tcp-dst #		/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-udp-src #		/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-udp-dst #		/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-flags #
+        type: u32
+        enum: tc-cls-flags
+        enum-as-flags: true
+      -
+        name: tca-flower-key-vlan-id #		/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-vlan-prio #	/* u8   */
+        type: u8
+      -
+        name: tca-flower-key-vlan-eth-type #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-key-id #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-ipv4-src #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-ipv4-src-mask #/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-ipv4-dst #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-ipv4-dst-mask #/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-ipv6-src #	/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-enc-ipv6-src-mask #/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-enc-ipv6-dst #	/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-enc-ipv6-dst-mask #/* struct in6_addr */
+        type: binary
+      -
+        name: tca-flower-key-tcp-src-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-tcp-dst-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-udp-src-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-udp-dst-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-sctp-src-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-sctp-dst-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-sctp-src #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-sctp-dst #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-udp-src-port #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-udp-src-port-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-udp-dst-port #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-udp-dst-port-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-flags #		/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-flags-mask #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-icmpv4-code #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv4-code-mask #/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv4-type #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv4-type-mask #/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv6-code #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv6-code-mask #/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv6-type #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-icmpv6-type-mask #/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-arp-sip #		/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-arp-sip-mask #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-arp-tip #		/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-arp-tip-mask #	/* be32 */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-arp-op #		/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-arp-op-mask #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-arp-sha #		/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-arp-sha-mask #	/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-arp-tha #		/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-arp-tha-mask #	/* ETH_ALEN */
+        type: binary
+      -
+        name: tca-flower-key-mpls-ttl #	/* u8 - 8 bits */
+        type: u8
+      -
+        name: tca-flower-key-mpls-bos #	/* u8 - 1 bit */
+        type: u8
+      -
+        name: tca-flower-key-mpls-tc #		/* u8 - 3 bits */
+        type: u8
+      -
+        name: tca-flower-key-mpls-label #	/* be32 - 20 bits */
+        type: u32
+        byte-order: big-endian
+      -
+        name: tca-flower-key-tcp-flags #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-tcp-flags-mask #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ip-tos #		/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-ip-tos-mask #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-ip-ttl #		/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-ip-ttl-mask #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-cvlan-id #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-cvlan-prio #	/* u8   */
+        type: u8
+      -
+        name: tca-flower-key-cvlan-eth-type #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-enc-ip-tos #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-enc-ip-tos-mask #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-enc-ip-ttl #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-enc-ip-ttl-mask #	/* u8 */
+        type: u8
+      -
+        name: tca-flower-key-enc-opts #
+        type: binary
+      -
+        name: tca-flower-key-enc-opts-mask #
+        type: binary
+      -
+        name: tca-flower-in-hw-count #
+        type: binary
+      -
+        name: tca-flower-key-port-src-min #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-port-src-max #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-port-dst-min #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-port-dst-max #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ct-state #	/* u16 */
+        type: u16
+      -
+        name: tca-flower-key-ct-state-mask #	/* u16 */
+        type: u16
+      -
+        name: tca-flower-key-ct-zone #		/* u16 */
+        type: u16
+      -
+        name: tca-flower-key-ct-zone-mask #	/* u16 */
+        type: u16
+      -
+        name: tca-flower-key-ct-mark #		/* u32 */
+        type: u32
+      -
+        name: tca-flower-key-ct-mark-mask #	/* u32 */
+        type: u32
+      -
+        name: tca-flower-key-ct-labels #	/* u128 */
+        type: binary
+      -
+        name: tca-flower-key-ct-labels-mask #	/* u128 */
+        type: binary
+      -
+        name: tca-flower-key-mpls-opts #
+        type: binary
+      -
+        name: tca-flower-key-hash #		/* u32 */
+        type: u32
+      -
+        name: tca-flower-key-hash-mask #	/* u32 */
+        type: u32
+      -
+        name: tca-flower-key-num-of-vlans #    /* u8 */
+        type: u8
+      -
+        name: tca-flower-key-pppoe-sid #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-ppp-proto #	/* be16 */
+        type: u16
+        byte-order: big-endian
+      -
+        name: tca-flower-key-l2-tpv3-sid #	/* be32 */
+        type: u32
+        byte-order: big-endian
+  -
+    name: tc-act-attrs
+    attributes:
+      -
+        name: tca-act-kind #
+        type: string
+      -
+        name: tca-act-options #
+        type: binary
+      -
+        name: tca-act-index #
+        type: u32
+      -
+        name: tca-act-stats #
+        type: binary
+      -
+        name: tca-act-pad #
+        type: binary
+      -
+        name: tca-act-cookie #
+        type: binary
+      -
+        name: tca-act-flags #
+        type: binary
+      -
+        name: tca-act-hw-stats #
+        type: binary
+      -
+        name: tca-act-used-hw-stats #
+        type: binary
+      -
+        name: tca-act-in-hw-count #
+        type: binary
+operations:
+  enum-model: directional
+  list:
+    -
+      name: gettfilter
+      doc: Get / dump tc filter information.
+      value: 46
+      attribute-set: tfilter-attrs
+      fixed-header: tcmsg
+      dump:
+        request:
+          value: 46
+        reply: &tfilter-all
+          value: 44
+          attributes:
+            - index
+
+mcast-groups:
+  list:
+    -
+      name: mgmt

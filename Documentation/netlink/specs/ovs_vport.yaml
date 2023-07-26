@@ -119,20 +119,16 @@ attribute-sets:
 
 operations:
   name-prefix: ovs-vport-cmd-
+  fixed-header: ovs-header
   list:
     -
-      name: get
-      doc: Get / dump OVS vport configuration and state
-      value: 3
+      name: new
+      doc: Create new OVS vport
+      value: 1
       attribute-set: vport
-      fixed-header: ovs-header
-      do: &vport-get-op
+      do:
         request:
-          attributes:
-            - dp-ifindex
-            - name
-        reply: &dev-all
-          attributes:
+          attributes: &vport-attrs
             - dp-ifindex
             - port-no
             - type
@@ -142,6 +138,28 @@ operations:
             - ifindex
             - netnsid
             - upcall-stats
+    -
+      name: del
+      doc: Create new OVS vport
+      value: 1
+      attribute-set: vport
+      do:
+        request:
+          attributes:
+            - dp-ifindex
+            - name
+    -
+      name: get
+      doc: Get / dump OVS vport configuration and state
+      value: 3
+      attribute-set: vport
+      do: &vport-get-op
+        request:
+          attributes:
+            - dp-ifindex
+            - name
+        reply:
+          attributes: *vport-attrs
       dump: *vport-get-op
 
 mcast-groups:
