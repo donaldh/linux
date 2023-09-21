@@ -2062,6 +2062,8 @@ enum netdev_ml_priv_type {
  *	moves out.
  */
 
+struct net_device_hw_ops;
+
 struct net_device {
 	char			name[IFNAMSIZ];
 	struct netdev_name_node	*name_node;
@@ -2158,6 +2160,8 @@ struct net_device {
 #endif
 
 	const struct header_ops *header_ops;
+
+	const struct net_device_hw_ops *hw_ops;
 
 	unsigned char		operstate;
 	unsigned char		link_mode;
