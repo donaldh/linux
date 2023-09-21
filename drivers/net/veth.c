@@ -27,6 +27,7 @@
 #include <linux/bpf_trace.h>
 #include <linux/net_tstamp.h>
 #include <net/page_pool.h>
+#include <linux/netdev_hw.h>
 
 #define DRV_NAME	"veth"
 #define DRV_VERSION	"1.0"
@@ -1744,6 +1745,7 @@ static const struct net_device_ops veth_netdev_ops = {
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= veth_poll_controller,
 #endif
+	.ndo_setup_tc		= bpf_hw_setup_tc,
 	.ndo_get_iflink		= veth_get_iflink,
 	.ndo_fix_features	= veth_fix_features,
 	.ndo_set_features	= veth_set_features,
