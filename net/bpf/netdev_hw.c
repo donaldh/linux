@@ -130,6 +130,7 @@ int bpf_hw_setup_tc(struct net_device *dev, enum tc_setup_type type,
 		    void *type_data)
 {
 	const struct net_device_hw_ops *hw_ops = dev->hw_ops;
+	struct flow_block_offload *f = type_data;
 	void *priv = netdev_priv(dev);
 
 	if (!hw_ops) {
@@ -144,8 +145,8 @@ int bpf_hw_setup_tc(struct net_device *dev, enum tc_setup_type type,
 			       dev->name);
 			return -EOPNOTSUPP;
 		}
-		printk(KERN_INFO "Calling flow_block_cb_setup_simple on %s\n",
-		       dev->name);
+		printk(KERN_INFO "Calling flow_block_cb_setup_simple on %s, cmd=%s\n",
+		       dev->name, f->command ? "unbind" : "bind");
 		return flow_block_cb_setup_simple(type_data,
 						  &bpf_hw_block_ft_cb_list,
 						  hw_ops->setup_ft,
