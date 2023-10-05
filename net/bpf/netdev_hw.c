@@ -10,6 +10,9 @@
 
 extern struct bpf_struct_ops bpf_net_device_hw_ops;
 
+static struct btf* kernel_btf;
+static u32 flow_cls_offload_id;
+
 static const struct bpf_func_proto *
 bpf_hw_get_func_proto(enum bpf_func_id func_id,
 		      const struct bpf_prog *prog)
@@ -26,6 +29,26 @@ static bool bpf_hw_is_valid_access(int off, int size,
 	bool r = bpf_tracing_btf_ctx_access(off, size, type, prog, info);
 	printk(KERN_INFO "bpf_hw_is_valid_access %d, %d, %d: %s\n",
 	       off, size, type, r ? "true" : "false");
+
+	if (info->btf && info->btf_id) {
+		const struct btf_type * t =
+			btf_type_by_id(info->btf, info->btf_id);
+		const char *name =
+			btf_name_by_offset(info->btf, t->name_off);
+		printk(KERN_INFO "info type=0x%x, name=%s\n",
+		       info->reg_type, name);
+	} else {
+		if (off == 8 && size == 8) {
+			/* promote void* to struct flow_cls_offload* */
+			info->btf = kernel_btf;
+			info->btf_id = flow_cls_offload_id;
+			info->reg_type = PTR_TO_BTF_ID | PTR_TRUSTED;
+
+			printk(KERN_INFO
+			       "promoted to struct flow_cls_offload\n");
+		}
+	}
+
 	return r;
 }
 
@@ -33,8 +56,12 @@ static int bpf_hw_btf_struct_access(struct bpf_verifier_log *log,
 				    const struct bpf_reg_state *reg,
 				    int off, int size)
 {
-	printk(KERN_INFO "bpf_hw_btf_struct_access %d, %d\n", off, size);
-	return 0;
+	const struct btf_type *t = btf_type_by_id(reg->btf, reg->btf_id);
+	const char *name = btf_name_by_offset(reg->btf, t->name_off);
+	printk(KERN_INFO "bpf_hw_btf_struct_access %s, %d, %d\n",
+	       name, off, size);
+
+	return PTR_TO_BTF_ID | PTR_TRUSTED;
 }
 
 static const struct bpf_verifier_ops  bpf_hw_verifier_ops = {
@@ -72,7 +99,10 @@ static int bpf_hw_check_member(const struct btf_type *t,
 			       const struct btf_member *member,
 			       const struct bpf_prog *prog)
 {
-	printk(KERN_INFO "bpf_hw_check_member\n");
+	const char *name = btf_name_by_offset(prog->aux->attach_btf,
+					      member->name_off);
+	printk(KERN_INFO "bpf_hw_check_member name=%s, kind=%d\n",
+	       name, BTF_INFO_KIND(t->type));
 	return 0;
 }
 
@@ -88,12 +118,11 @@ static int bpf_hw_init_member(const struct btf_type *t,
 	ops = (struct net_device_hw_ops *)kdata;
 
 	moff = __btf_member_bit_offset(t, member) / 8;
-	printk(KERN_INFO "bpf_hw_init_member moff=%d, name=%lu\n",
-	       moff, offsetof(struct net_device_hw_ops, name));
 	switch (moff) {
 	case offsetof(struct net_device_hw_ops, name):
-		if (bpf_obj_name_cpy(ops->name, uops->name, sizeof(ops->name))
-		    <= 0)
+		if (bpf_obj_name_cpy(ops->name,
+				     uops->name,
+				     sizeof(ops->name)) <= 0)
 			return -EINVAL;
 		return 1;
 	}
@@ -103,6 +132,13 @@ static int bpf_hw_init_member(const struct btf_type *t,
 static int bpf_hw_init(struct btf *btf)
 {
 	printk(KERN_INFO "bpf_hw_init\n");
+
+	kernel_btf = btf;
+	s32 type_id = btf_find_by_name_kind(btf, "flow_cls_offload",
+					    BTF_KIND_STRUCT);
+	if (type_id < 0)
+		return -EINVAL;
+	flow_cls_offload_id = type_id;
 	return 0;
 }
 
@@ -141,11 +177,13 @@ int bpf_hw_setup_tc(struct net_device *dev, enum tc_setup_type type,
 	switch (type) {
 	case TC_SETUP_FT:
 		if (!hw_ops->setup_ft) {
-			printk(KERN_INFO "No setup_tc to call in hw_ops on %s\n",
+			printk(KERN_INFO
+			       "No setup_ft to call in hw_ops on %s\n",
 			       dev->name);
 			return -EOPNOTSUPP;
 		}
-		printk(KERN_INFO "Calling flow_block_cb_setup_simple on %s, cmd=%s\n",
+		printk(KERN_INFO
+		       "Calling flow_block_cb_setup_simple on %s, cmd=%s\n",
 		       dev->name, f->command ? "unbind" : "bind");
 		return flow_block_cb_setup_simple(type_data,
 						  &bpf_hw_block_ft_cb_list,
