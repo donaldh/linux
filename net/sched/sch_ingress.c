@@ -83,8 +83,11 @@ static int ingress_init(struct Qdisc *sch, struct nlattr *opt,
 	bool created;
 	int err;
 
-	if (sch->parent != TC_H_INGRESS)
+	if (sch->parent != TC_H_INGRESS) {
+		NL_SET_ERR_MSG(extack, "Invalid parent. Only parent TC_H_INGRESS "
+			       __stringify(TC_H_INGRESS) " is valid");
 		return -EOPNOTSUPP;
+	}
 
 	net_inc_ingress_queue();
 
@@ -248,8 +251,11 @@ static int clsact_init(struct Qdisc *sch, struct nlattr *opt,
 	bool created;
 	int err;
 
-	if (sch->parent != TC_H_CLSACT)
+	if (sch->parent != TC_H_CLSACT) {
+		NL_SET_ERR_MSG(extack, "Invalid parent. Only parent TC_H_CLSACT "
+			       __stringify(TC_H_CLSACT) " is valid");
 		return -EOPNOTSUPP;
+	}
 
 	net_inc_ingress_queue();
 	net_inc_egress_queue();
