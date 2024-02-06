@@ -352,19 +352,28 @@ static int choke_change(struct Qdisc *sch, struct nlattr *opt,
 	if (err < 0)
 		return err;
 
-	if (tb[TCA_CHOKE_PARMS] == NULL ||
-	    tb[TCA_CHOKE_STAB] == NULL)
+	if (tb[TCA_CHOKE_PARMS] == NULL) {
+		NL_SET_ERR_MSG(extack,
+			       "Missing TCA_CHOKE_PARMS of type 'struct tc_red_qopt'");
 		return -EINVAL;
+	}
+	if (tb[TCA_CHOKE_STAB] == NULL) {
+		NL_SET_ERR_MSG(extack, "Missing TCA_CHOKE_STAB");
+		return -EINVAL;
+	}
 
 	max_P = tb[TCA_CHOKE_MAX_P] ? nla_get_u32(tb[TCA_CHOKE_MAX_P]) : 0;
 
 	ctl = nla_data(tb[TCA_CHOKE_PARMS]);
 	stab = nla_data(tb[TCA_CHOKE_STAB]);
-	if (!red_check_params(ctl->qth_min, ctl->qth_max, ctl->Wlog, ctl->Scell_log, stab))
+	if (!red_check_params(ctl->qth_min, ctl->qth_max, ctl->Wlog, ctl->Scell_log, stab)) {
+		NL_SET_ERR_MSG(extack, "TCA_CHOKE_PARMS has invalid red parameters");
 		return -EINVAL;
-
-	if (ctl->limit > CHOKE_MAX_QUEUE)
+	}
+	if (ctl->limit > CHOKE_MAX_QUEUE) {
+		NL_SET_ERR_MSG(extack, "TCA_CHOKE_PARMS.limit exceeds CHOKE_MAX_QUEUE");
 		return -EINVAL;
+	}
 
 	mask = roundup_pow_of_two(ctl->limit + 1) - 1;
 	if (mask != q->tab_mask) {
