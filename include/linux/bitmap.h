@@ -514,13 +514,13 @@ static inline void bitmap_replace(unsigned long *dst,
  * Scatters bitmap with sequential bits according to the given @mask.
  *
  * Example:
- * If @src bitmap = 0x005a, with @mask = 0x1313, @dst will be 0x0302.
+ * .. code-block:: none
  *
- * Or in binary form
- * @src			@mask			@dst
- * 0000000001011010	0001001100010011	0000001100000010
+ *   If @src bitmap = 0x005a, with @mask = 0x1313, @dst will be 0x0302.
  *
- * (Bits 0, 1, 2, 3, 4, 5 are copied to the bits 0, 1, 4, 8, 9, 12)
+ *   Or in binary form
+ *   @src		@mask			@dst
+ *   0000000001011010	0001001100010011	0000001100000010
  *
  * A more 'visual' description of the operation::
  *
@@ -561,13 +561,13 @@ static inline void bitmap_scatter(unsigned long *dst, const unsigned long *src,
  * Gathers bitmap with sparse bits according to the given @mask.
  *
  * Example:
- * If @src bitmap = 0x0302, with @mask = 0x1313, @dst will be 0x001a.
+ * .. code-block:: none
  *
- * Or in binary form
- * @src			@mask			@dst
- * 0000001100000010	0001001100010011	0000000000011010
+ *   If @src bitmap = 0x0302, with @mask = 0x1313, @dst will be 0x001a.
  *
- * (Bits 0, 1, 4, 8, 9, 12 are copied to the bits 0, 1, 2, 3, 4, 5)
+ *   Or in binary form
+ *   @src			@mask			@dst
+ *   0000001100000010	0001001100010011	0000000000011010
  *
  * A more 'visual' description of the operation::
  *
