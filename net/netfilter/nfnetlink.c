@@ -304,6 +304,7 @@ replay:
 			break;
 		default:
 			rcu_read_unlock();
+			NL_SET_ERR_MSG(extack, "Not supported outside of a batch");
 			err = -EINVAL;
 			break;
 		}
@@ -380,8 +381,10 @@ static void nfnetlink_rcv_batch(struct sk_buff *skb, struct nlmsghdr *nlh,
 	u32 status;
 	int err;
 
-	if (subsys_id >= NFNL_SUBSYS_COUNT)
-		return netlink_ack(skb, nlh, -EINVAL, NULL);
+	if (subsys_id >= NFNL_SUBSYS_COUNT) {
+		NL_SET_ERR_MSG(&extack, "Invalid subsystem id for a batch");
+		return netlink_ack(skb, nlh, -EINVAL, &extack);
+	}
 replay:
 	status = 0;
 replay_abort:
@@ -401,20 +404,23 @@ replay_abort:
 #endif
 		{
 			nfnl_unlock(subsys_id);
-			netlink_ack(oskb, nlh, -EOPNOTSUPP, NULL);
+			NL_SET_ERR_MSG(&extack, "Invalid subsystem");
+			netlink_ack(oskb, nlh, -EOPNOTSUPP, &extack);
 			return kfree_skb(skb);
 		}
 	}
 
 	if (!ss->valid_genid || !ss->commit || !ss->abort) {
 		nfnl_unlock(subsys_id);
-		netlink_ack(oskb, nlh, -EOPNOTSUPP, NULL);
+		NL_SET_ERR_MSG(&extack, "Subsystem does not support batch");
+		netlink_ack(oskb, nlh, -EOPNOTSUPP, &extack);
 		return kfree_skb(skb);
 	}
 
 	if (!try_module_get(ss->owner)) {
 		nfnl_unlock(subsys_id);
-		netlink_ack(oskb, nlh, -EOPNOTSUPP, NULL);
+		NL_SET_ERR_MSG(&extack, "No module");
+		netlink_ack(oskb, nlh, -EOPNOTSUPP, &extack);
 		return kfree_skb(skb);
 	}
 
@@ -454,6 +460,7 @@ replay_abort:
 
 		/* Only requests are handled by the kernel */
 		if (!(nlh->nlmsg_flags & NLM_F_REQUEST)) {
+			NL_SET_ERR_MSG(&extack, "Only requests are allowed");
 			err = -EINVAL;
 			goto ack;
 		}
@@ -476,17 +483,21 @@ replay_abort:
 		 * subsystem.
 		 */
 		if (NFNL_SUBSYS_ID(type) != subsys_id) {
+			NL_SET_ERR_MSG(&extack,
+				       "Subsystem id does not match id in batch");
 			err = -EINVAL;
 			goto ack;
 		}
 
 		nc = nfnetlink_find_client(type, ss);
 		if (!nc) {
+			NL_SET_ERR_MSG(&extack, "Invalid message type");
 			err = -EINVAL;
 			goto ack;
 		}
 
 		if (nc->type != NFNL_CB_BATCH) {
+			NL_SET_ERR_MSG(&extack, "Not supported in a batch");
 			err = -EINVAL;
 			goto ack;
 		}
@@ -515,7 +526,8 @@ replay_abort:
 			err = nla_parse_deprecated(cda,
 						   ss->cb[cb_id].attr_count,
 						   attr, attrlen,
-						   ss->cb[cb_id].policy, NULL);
+						   ss->cb[cb_id].policy,
+						   &extack);
 			if (err < 0)
 				goto ack;
 
