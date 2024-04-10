@@ -980,7 +980,14 @@ class YnlFamily(SpecFamily):
                     self._decode_extack(req_msg, req_op, nl_msg.extack)
 
                 if nl_msg.error:
-                    raise NlError(nl_msg)
+                    print(f"Error: {nl_msg.nl_seq}")
+                    rsp.append(NlError(nl_msg))
+                    op_rsp = []
+
+                    del reqs_by_seq[nl_msg.nl_seq]
+                    done = len(reqs_by_seq) == 0
+                    break
+
                 if nl_msg.done:
                     if nl_msg.extack:
                         print("Netlink warning:")
