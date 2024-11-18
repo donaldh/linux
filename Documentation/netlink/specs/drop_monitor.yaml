@@ -1,0 +1,220 @@
+# SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause)
+
+name: NET_DM
+
+protocol: genetlink-legacy
+
+doc: |
+  Monitoring for network dropped packet alerts.
+
+definitions:
+  -
+    name: alert-mode
+    type: enum
+    entries:
+      - summary
+      - packet
+  -
+    name: origin
+    type: enum
+    entries:
+      - sw
+      - hw
+  -
+    name: net-dm-alert-msg
+    type: struct
+    members:
+      -
+        name: entries
+        type: u32
+      -
+        name: pc
+        type: u64
+        display-hint: hex
+      -
+        name: count
+        type: u32
+
+attribute-sets:
+  -
+    name: net-dm-attrs
+    attributes:
+      -
+        name: unspec
+        type: binary
+        struct: net-dm-alert-msg
+        value: 0
+      -
+        name: alert-mode
+        type: u8
+        enum: alert-mode
+      -
+        name: pc
+        type: u64
+        display-hint: hex
+      -
+        name: symbol
+        type: string
+      -
+        name: in-port
+        type: nest
+        nested-attributes: in-port-attrs
+      -
+        name: timestamp
+        type: u64
+      -
+        name: proto
+        type: u16
+      -
+        name: payload
+        type: binary
+      -
+        name: pad
+        type: pad
+      -
+        name: trunc-len
+        type: u32
+      -
+        name: orig-len
+        type: u32
+      -
+        name: queue-len
+        type: u32
+      -
+        name: stats
+        type: binary # TODO: nest
+      -
+        name: hw-stats
+        type: binary # TODO: nest
+      -
+        name: origin
+        type: u16
+      -
+        name: hw-trap-group-name
+        type: string
+      -
+        name: hw-trap-name
+        type: string
+      -
+        name: hw-entries
+        type: binary # TODO: nest
+      -
+        name: hw-entry
+        type: binary # TODO: nest
+      -
+        name: hw-trap-count
+        type: u32
+      -
+        name: sw-drops
+        type: flag
+      -
+        name: hw-drops
+        type: flag
+      -
+        name: flow-action-cookie
+        type: binary
+      -
+        name: reason
+        type: string
+  -
+    name: in-port-attrs
+    attributes:
+      -
+        name: ifindex
+        type: u32
+        value: 0
+      -
+        name: name
+        type: string
+
+operations:
+  enum-model: directional
+  list:
+    -
+      name: alert
+      doc: Alert
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      value: 1
+      event:
+        attributes:
+          - port
+
+    -
+      name: config
+      doc: Config
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      value: 2
+      do:
+        request:
+          attributes:
+            - alert-mode
+
+    -
+      name: start
+      doc: Start
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      value: 3
+      do:
+        request:
+          attributes: []
+
+    -
+      name: stop
+      doc: Stop
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      value: 4
+      do:
+        request:
+          attributes: []
+
+    -
+      name: packet-alert
+      doc: Packet alert
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      value: 5
+      event:
+        attributes:
+          - port
+
+    -
+      name: config-get
+      doc: Config get
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      do:
+        request:
+          value: 6
+          attributes:
+            - port
+        reply:
+          value: 7
+
+    -
+      name: stats-get
+      doc: Stats get
+      attribute-set: net-dm-attrs
+      flags: [ admin-perm ]
+
+      do:
+        request:
+          value: 8
+          attributes:
+            - port
+        reply:
+          value: 9
+
+mcast-groups:
+  list:
+    -
+      name: events
