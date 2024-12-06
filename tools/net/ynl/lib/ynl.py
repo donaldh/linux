@@ -633,7 +633,9 @@ class YnlFamily(SpecFamily):
         elif attr_spec.sub_type:
             decoded = attr.as_c_array(attr_spec.sub_type)
             if 'enum' in attr_spec:
-                decoded = [ self._decode_enum(x, attr_spec) for x in decoded]
+                decoded = [ self._decode_enum(x, attr_spec) for x in decoded ]
+            elif attr_spec.display_hint:
+                decoded = self._formatted_string(decoded, attr_spec.display_hint)
         else:
             decoded = attr.as_bin()
             if attr_spec.display_hint:
