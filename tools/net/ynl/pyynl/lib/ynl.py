@@ -2,6 +2,7 @@
 #
 # pylint: disable=missing-class-docstring, missing-function-docstring
 # pylint: disable=too-many-branches, too-many-locals, too-many-instance-attributes
+# pylint: disable=too-many-positional-arguments, too-many-arguments
 # pylint: disable=too-many-lines
 
 """
@@ -1026,7 +1027,7 @@ class YnlFamily(SpecFamily):
             try:
                 if attr_spec["type"] == 'pad':
                     continue
-                elif attr_spec["type"] == 'nest':
+                if attr_spec["type"] == 'nest':
                     subdict = self._decode(NlAttrs(attr.raw),
                                            attr_spec['nested-attributes'],
                                            search_attrs)
